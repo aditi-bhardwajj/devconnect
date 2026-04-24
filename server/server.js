@@ -17,7 +17,10 @@ app.use(express.json());
 // connect MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
+  .catch((err) => {
+    console.log("MongoDB error:", err);
+    process.exit(1);
+  });
 
 // ------------------- SIGNUP -------------------
 app.post("/signup", async (req, res) => {
@@ -62,7 +65,7 @@ app.post("/login", async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id },
-      "secretkey",
+      process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
@@ -81,7 +84,7 @@ const auth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, "secretkey");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.userId;
     next();
   } catch (err) {
@@ -126,6 +129,8 @@ app.delete("/posts/:id", auth, async (req, res) => {
 });
 
 // ------------------- SERVER -------------------
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
