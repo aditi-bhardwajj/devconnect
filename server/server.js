@@ -19,6 +19,10 @@ console.log("JWT_SECRET:", process.env.JWT_SECRET ? "Loaded" : "Missing");
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("API is running...");
+});
+
 // ------------------- DB CONNECT -------------------
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
