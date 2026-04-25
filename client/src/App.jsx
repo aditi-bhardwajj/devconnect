@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+const BASE_URL = "https://devconnect-backend-0iio.onrender.com";
+
 function App() {
   const [form, setForm] = useState({
     name: "",
@@ -14,16 +16,12 @@ function App() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    setIsLoggedIn(true);
-
-    setTimeout(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
       getPosts();
-    }, 0);
-  }
-}, []);
+    }
+  }, []);
 
   const handleChange = (e) => {
     setForm({
@@ -37,10 +35,11 @@ function App() {
     setTimeout(() => setMessage(""), 2500);
   };
 
+  // ---------------- SIGNUP ----------------
   const handleSignup = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/signup", {
+      const res = await fetch(`${BASE_URL}/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -60,10 +59,11 @@ function App() {
     setLoading(false);
   };
 
+  // ---------------- LOGIN ----------------
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/login", {
+      const res = await fetch(`${BASE_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -97,12 +97,18 @@ function App() {
     showMessage("Logged out");
   };
 
+  // ---------------- CREATE POST ----------------
   const handleCreatePost = async () => {
+    if (!form.content.trim()) {
+      showMessage("Post cannot be empty");
+      return;
+    }
+
     setLoading(true);
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch("http://localhost:5000/posts", {
+      const res = await fetch(`${BASE_URL}/posts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,19 +129,20 @@ function App() {
     setLoading(false);
   };
 
+  // ---------------- GET POSTS ----------------
   const getPosts = async () => {
     const token = localStorage.getItem("token");
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/posts", {
+      const res = await fetch(`${BASE_URL}/posts`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
       const data = await res.json();
-      setPosts(data);
+      setPosts(Array.isArray(data) ? data : []);
     } catch {
       showMessage("Error loading posts");
     }
@@ -143,17 +150,24 @@ function App() {
     setLoading(false);
   };
 
+  // ---------------- DELETE POST ----------------
   const handleDelete = async (id) => {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:5000/posts/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    try {
+      const res = await fetch(`${BASE_URL}/posts/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
-    getPosts();
+      const data = await res.json();
+      showMessage(data.message);
+      getPosts();
+    } catch {
+      showMessage("Error deleting post");
+    }
   };
 
   return (
