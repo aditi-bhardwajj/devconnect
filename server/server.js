@@ -28,9 +28,10 @@ mongoose.connect(process.env.MONGO_URI || "fallback")
 // ------------------- SIGNUP -------------------
 app.post("/signup", async (req, res) => {
   try {
+    console.log("REQ BODY:", req.body);
+
     const { name, email, password } = req.body;
 
-    // ✅ ADD THIS VALIDATION
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields required" });
     }
