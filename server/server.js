@@ -10,12 +10,15 @@ const Post = require("./models/post");
 
 const app = express();
 
+console.log("MONGO_URI:", process.env.MONGO_URI);
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
+
 // middleware
 app.use(cors());
 app.use(express.json());
 
-// connect MongoDB
-mongoose.connect(process.env.MONGO_URI)
+// ------------------- DB CONNECT -------------------
+mongoose.connect(process.env.MONGO_URI || "fallback")
   .then(() => console.log("MongoDB connected"))
   .catch((err) => {
     console.log("MongoDB error:", err);
@@ -26,6 +29,11 @@ mongoose.connect(process.env.MONGO_URI)
 app.post("/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // ✅ ADD THIS VALIDATION
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "All fields required" });
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -44,10 +52,10 @@ app.post("/signup", async (req, res) => {
 
     res.json({ message: "Signup successful" });
   } catch (err) {
+    console.log("Signup error:", err);
     res.status(500).json({ message: "Error signing up" });
   }
 });
-
 // ------------------- LOGIN -------------------
 app.post("/login", async (req, res) => {
   try {
@@ -63,6 +71,10 @@ app.post("/login", async (req, res) => {
       return res.json({ message: "Invalid password" });
     }
 
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET missing in environment");
+    }
+
     const token = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET,
@@ -70,18 +82,18 @@ app.post("/login", async (req, res) => {
     );
 
     res.json({ message: "Login successful", token });
+
   } catch (err) {
-    res.status(500).json({ message: "Error logging in" });
-  }
+  console.error("Login error:", err);
+  res.status(500).json({ message: err.message });
+}
 });
 
-// ------------------- AUTH MIDDLEWARE -------------------
+// ------------------- AUTH -------------------
 const auth = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
 
-  if (!token) {
-    return res.json({ message: "No token" });
-  }
+  if (!token) return res.json({ message: "No token" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -103,7 +115,9 @@ app.post("/posts", auth, async (req, res) => {
     await post.save();
 
     res.json({ message: "Post created" });
+
   } catch (err) {
+    console.error("Create post error:", err);
     res.status(500).json({ message: "Error creating post" });
   }
 });
@@ -113,7 +127,9 @@ app.get("/posts", auth, async (req, res) => {
   try {
     const posts = await Post.find().populate("user", "name");
     res.json(posts);
+
   } catch (err) {
+    console.error("Fetch posts error:", err);
     res.status(500).json({ message: "Error fetching posts" });
   }
 });
@@ -123,7 +139,9 @@ app.delete("/posts/:id", auth, async (req, res) => {
   try {
     await Post.findByIdAndDelete(req.params.id);
     res.json({ message: "Post deleted" });
+
   } catch (err) {
+    console.error("Delete error:", err);
     res.status(500).json({ message: "Error deleting post" });
   }
 });

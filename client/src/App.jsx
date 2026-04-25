@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const BASE_URL = "https://devconnect-backend-0iio.onrender.com";
 
@@ -15,13 +15,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsLoggedIn(true);
-      getPosts();
-    }
-  }, []);
 
   const handleChange = (e) => {
     setForm({
@@ -130,25 +123,38 @@ function App() {
   };
 
   // ---------------- GET POSTS ----------------
-  const getPosts = async () => {
+  const getPosts = useCallback(async () => {
+  const token = localStorage.getItem("token");
+  setLoading(true);
+
+  try {
+    const res = await fetch(`${BASE_URL}/posts`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    setPosts(data);
+  } catch {
+    showMessage("Error loading posts");
+  }
+
+  setLoading(false);
+}, []);
+
+useEffect(() => {
+  const init = async () => {
     const token = localStorage.getItem("token");
-    setLoading(true);
 
-    try {
-      const res = await fetch(`${BASE_URL}/posts`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      const data = await res.json();
-      setPosts(Array.isArray(data) ? data : []);
-    } catch {
-      showMessage("Error loading posts");
+    if (token) {
+      setIsLoggedIn(true);
+      await getPosts();
     }
-
-    setLoading(false);
   };
+
+  init();
+}, [getPosts]);
 
   // ---------------- DELETE POST ----------------
   const handleDelete = async (id) => {
